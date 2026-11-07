@@ -6,6 +6,9 @@ const check = (condition, message) => {
 };
 const tile = (r, c) => document.querySelector(`.tile[data-r="${r}"][data-c="${c}"]`);
 const target = (r, c) => document.querySelector(`.wall-target[data-r="${r}"][data-c="${c}"]`);
+check(matchMode === 'solo' && $('match-solo').getAttribute('aria-pressed') === 'true', 'single player is the default');
+$('match-local').click();
+check(matchMode === 'local', 'two-player mode is available');
 check(document.querySelectorAll('.tile').length === 81, '81 playable squares rendered');
 check(document.querySelectorAll('.tile.legal').length === 3, 'opening moves highlighted');
 tile(7, 4).click();
@@ -62,4 +65,98 @@ document.activeElement?.blur();
 check(document.documentElement.scrollWidth <= window.innerWidth, 'layout has no horizontal overflow');
 const boardBox = $('board').getBoundingClientRect();
 check(Math.abs(boardBox.width - boardBox.height) < 1, 'board remains square');
+// A controlled clock exercises automatic turns and cancellation without wall-clock sleeps.
+const realSetTimeout = globalThis.setTimeout;
+const realClearTimeout = globalThis.clearTimeout;
+const pendingTurns = new Map();
+let nextTimer = -1;
+globalThis.setTimeout = (callback, delay, ...args) => {
+  if (delay !== 450) return realSetTimeout(callback, delay, ...args);
+  const id = nextTimer--;
+  pendingTurns.set(id, callback);
+  return id;
+};
+globalThis.clearTimeout = (id) => {
+  if (pendingTurns.has(id)) pendingTurns.delete(id);
+  else realClearTimeout(id);
+};
+const runComputerClock = () => {
+  const callback = pendingTurns.get(computerTimer);
+  check(Boolean(callback), 'computer response is automatically scheduled');
+  pendingTurns.delete(computerTimer);
+  callback();
+};
+try {
+  $('match-solo').click();
+  check(matchMode === 'solo' && $('player-1').textContent.includes('電腦'), 'single player identifies the computer opponent');
+  tile(7, 4).click();
+  check(isComputerTurn() && $('turn-title').textContent.includes('思考'), 'human move starts the computer turn');
+  check($('mode-move').disabled && $('mode-wall').disabled, 'human controls lock during the computer turn');
+  tile(1, 4).click();
+  $('mode-wall').click();
+  check(game.ply === 1 && mode === 'move', 'human cannot move the computer pawn or place a wall for it');
+  runComputerClock();
+  check(game.ply === 2 && game.turn === 0 && !isComputerTurn(), 'computer responds and returns control to the human');
+  check(pendingTurns.size === 0, 'computer makes exactly one response');
+  $('undo').click();
+  check(game.ply === 0 && game.turn === 0 && history.length === 0, 'solo undo retracts both the human move and the computer reply');
+
+  tile(7, 4).click();
+  $('undo').click();
+  check(game.ply === 0 && pendingTurns.size === 0, 'undo during thinking cancels the queued response');
+  tile(7, 4).click();
+  $('restart').click();
+  check(pendingTurns.size === 0, 'restart confirmation pauses the computer');
+  $('restart-dialog').querySelector('.close-dialog').click();
+  $('restart-dialog').dispatchEvent(new Event('close'));
+  check(isComputerTurn() && pendingTurns.size === 1, 'cancelling restart resumes the computer');
+  $('restart').click();
+  $('confirm-restart').click();
+  check(game.ply === 0 && pendingTurns.size === 0, 'confirmed restart cancels the old response');
+
+  $('mode-wall').click();
+  target(3, 3).click();
+  $('confirm-wall').click();
+  runComputerClock();
+  check(game.ply === 2 && game.turn === 0, 'computer also responds when the human places a wall');
+  $('undo').click();
+  check(game.walls.length === 0 && game.remaining[0] === 10, 'solo undo restores the human wall inventory');
+
+  tile(7, 4).click();
+  $('help').click();
+  check(pendingTurns.size === 0, 'opening rules pauses a pending computer response');
+  $('rules-dialog').querySelector('.close-dialog').click();
+  $('rules-dialog').dispatchEvent(new Event('close'));
+  check(pendingTurns.size === 1, 'closing rules resumes the response');
+  $('match-local').click();
+  check($('restart-dialog').open && pendingTurns.size === 0, 'mode change asks before resetting an active match');
+  $('confirm-restart').click();
+  check(matchMode === 'local' && game.ply === 0 && pendingTurns.size === 0, 'mode change cancels the prior computer turn');
+  tile(7, 4).click();
+  check(game.turn === 1 && pendingTurns.size === 0 && !$('mode-move').disabled, 'two-player mode leaves the second player under human control');
+
+  restart('solo');
+  game.pawns = [{ r: 6, c: 7 }, { r: 7, c: 1 }];
+  render();
+  tile(5, 7).click();
+  runComputerClock();
+  check(game.winner === 1 && $('winner-dialog').open && $('winner-title').textContent.includes('電腦'), 'computer can win and display its victory');
+  check(pendingTurns.size === 0, 'no computer turn remains after victory');
+  $('winner-dialog').querySelector('.close-dialog').click();
+  $('undo').click();
+  check(game.winner === null && game.turn === 0 && game.ply === 0, 'undoing a computer win returns to the human decision');
+
+  restart('solo');
+  game.pawns[0] = { r: 1, c: 1 };
+  render();
+  tile(0, 1).click();
+  check(game.winner === 0 && pendingTurns.size === 0, 'human victory never triggers a computer response');
+  $('play-again').click();
+  check(matchMode === 'solo' && game.ply === 0 && history.length === 0, 'play again preserves solo mode');
+} finally {
+  restart('solo');
+  globalThis.setTimeout = realSetTimeout;
+  globalThis.clearTimeout = realClearTimeout;
+  document.activeElement?.blur();
+}
 console.log(`UI CHECKS COMPLETE: ${passedChecks.length} passed. ${passedChecks.join('; ')}`);

@@ -1,4 +1,5 @@
 import { createGame, legalMoves, validateWall, movePawn, placeWall } from './game.js';
+import { chooseComputerAction } from './ai.js';
 
 const $ = (id) => document.getElementById(id);
 const names = ['藍方', '粉紅方'];
@@ -9,8 +10,37 @@ let mode = 'move';
 let orientation = 'h';
 let selected = null;
 let wallFocus = { r: 3, c: 3 };
+let matchMode = 'solo';
+let restartMode = matchMode;
+let computerTimer = null;
 const cells = [];
 const targets = [];
+
+function isComputerTurn() {
+  return matchMode === 'solo' && game.turn === 1 && game.winner === null;
+}
+
+function stopComputerTurn() {
+  clearTimeout(computerTimer);
+  computerTimer = null;
+}
+
+function scheduleComputerTurn() {
+  stopComputerTurn();
+  if (!isComputerTurn() || document.querySelector('dialog[open]')) return;
+  computerTimer = setTimeout(() => {
+    computerTimer = null;
+    if (!isComputerTurn()) return;
+    const action = chooseComputerAction(game);
+    const result = action.type === 'move' ? movePawn(game, action.to) : placeWall(game, action.wall);
+    if (result.ok) commit(result.state);
+  }, 450);
+}
+
+function openDialog(id) {
+  stopComputerTurn();
+  $(id).showModal();
+}
 
 function wallPosition(element, wall) {
   const horizontal = wall.o === 'h';
@@ -45,6 +75,7 @@ function updateSelection() {
 }
 
 function selectWall(r, c) {
+  if (mode !== 'wall' || isComputerTurn() || game.winner !== null) return;
   selected = { r, c, o: orientation };
   wallFocus = { r, c };
   targets.forEach((button) => { button.tabIndex = Number(button.dataset.r) === r && Number(button.dataset.c) === c ? 0 : -1; });
@@ -59,7 +90,7 @@ for (let r = 0; r < 9; r++) {
     button.dataset.r = r;
     button.dataset.c = c;
     button.addEventListener('click', () => {
-      if (mode !== 'move' || game.winner !== null) return;
+      if (mode !== 'move' || game.winner !== null || isComputerTurn()) return;
       const result = movePawn(game, { r, c });
       if (result.ok) commit(result.state);
       else announce(result.reason, true);
@@ -95,15 +126,25 @@ for (let r = 0; r < 8; r++) {
 
 function render() {
   const finished = game.winner !== null;
+  const thinking = isComputerTurn();
+  const solo = matchMode === 'solo';
+  $('match-label').textContent = solo ? '單人對電腦' : '同機雙人';
+  $('match-solo').setAttribute('aria-pressed', String(solo));
+  $('match-local').setAttribute('aria-pressed', String(!solo));
+  $('rules-intro').textContent = solo ? '你操作藍方先手，電腦操作粉紅方。完全離線也能對戰。' : '兩人共用一個畫面，藍方先手，輪流行動。';
+  $('undo-label').textContent = solo ? '悔一回合' : '悔一步';
+  $('turn-eyebrow').textContent = thinking ? 'COMPUTER TURN' : 'YOUR TURN';
+  $('board').setAttribute('aria-busy', String(thinking));
   document.documentElement.style.setProperty('--accent', `var(--${colors[game.turn]})`);
   document.documentElement.style.setProperty('--accent-rgb', game.turn === 0 ? '121,214,236' : '242,164,184');
   const moves = legalMoves(game);
   cells.forEach((button, index) => {
     const r = Math.floor(index / 9), c = index % 9;
     const occupant = game.pawns.findIndex((p) => p.r === r && p.c === c);
-    const legal = mode === 'move' && moves.some((p) => p.r === r && p.c === c);
+    const legal = !thinking && mode === 'move' && moves.some((p) => p.r === r && p.c === c);
     button.className = `tile${legal ? ' legal' : ''}${occupant === game.turn && !finished ? ' current' : ''}`;
     button.tabIndex = legal ? 0 : -1;
+    button.disabled = thinking || finished;
     button.setAttribute('aria-label', `${String.fromCharCode(65 + c)}${r + 1}${occupant >= 0 ? `，${names[occupant]}棋子` : ''}${legal ? '，可以移動到這裡' : ''}`);
     button.replaceChildren();
     if (occupant >= 0) {
@@ -122,6 +163,7 @@ function render() {
   });
   [0, 1].forEach((player) => {
     const rail = $(`player-${player}`);
+    rail.querySelector('.player-name strong').textContent = solo ? `${player === 0 ? '你' : '電腦'} · ${names[player]}` : names[player];
     rail.classList.toggle('active', game.turn === player);
     rail.querySelector('.wall-count').innerHTML = `<b>${game.remaining[player]}</b> / 10`;
     const sticks = rail.querySelector('.wall-sticks');
@@ -134,10 +176,10 @@ function render() {
     rail.setAttribute('aria-label', `${names[player]}，剩餘 ${game.remaining[player]} 道牆${game.turn === player ? '，目前回合' : ''}`);
   });
   $('move-number').textContent = finished ? `共 ${game.ply} 手` : `第 ${String(game.ply + 1).padStart(3, '0')} 手`;
-  $('turn-title').textContent = finished ? `${names[game.winner]}獲勝！` : `${names[game.turn]}的回合`;
-  $('turn-caption').textContent = finished ? '走到彼岸，這局由你拿下。' : '往前一步，或讓對手多繞一步。';
-  $('mode-move').disabled = finished;
-  $('mode-wall').disabled = finished || game.remaining[game.turn] === 0;
+  $('turn-title').textContent = finished ? winnerTitle() : (solo ? (thinking ? '電腦思考中…' : '輪到你了') : `${names[game.turn]}的回合`);
+  $('turn-caption').textContent = finished ? '對局結束，再來挑戰一局。' : (solo ? (thinking ? '正在選擇路線與放牆位置。' : '你是藍方，粉紅方由電腦自動操作。') : '往前一步，或讓對手多繞一步。');
+  $('mode-move').disabled = finished || thinking;
+  $('mode-wall').disabled = finished || thinking || game.remaining[game.turn] === 0;
   for (const action of ['move', 'wall']) {
     $(`mode-${action}`).classList.toggle('active', mode === action);
     $(`mode-${action}`).setAttribute('aria-pressed', String(mode === action));
@@ -154,7 +196,11 @@ function render() {
   });
   $('undo').disabled = history.length === 0;
   updateSelection();
-  if (mode === 'move') announce(finished ? '對局結束。可以重新開始，或悔一步檢視其他走法。' : `${names[game.turn]}，點選棋盤上的亮點移動。${game.remaining[game.turn] === 0 ? '你的牆已用完。' : ''}`);
+  if (mode === 'move') announce(finished ? '對局結束。可以重新開始，或悔棋檢視其他走法。' : (thinking ? '電腦會自動行動，稍等一下就輪到你。' : `${solo ? '輪到你了' : names[game.turn]}，點選棋盤上的亮點移動。${game.remaining[game.turn] === 0 ? '你的牆已用完。' : ''}`));
+}
+
+function winnerTitle() {
+  return matchMode === 'solo' ? (game.winner === 0 ? '你獲勝了！' : '電腦獲勝！') : `${names[game.winner]}獲勝！`;
 }
 
 function commit(next) {
@@ -164,14 +210,16 @@ function commit(next) {
   selected = null;
   render();
   if (game.winner !== null) {
-    $('winner-title').textContent = `${names[game.winner]}獲勝！`;
+    $('winner-title').textContent = winnerTitle();
     $('winner-detail').textContent = `經過 ${game.ply} 手較量，${names[game.winner]}率先抵達對面底線。換個策略，再挑戰一次？`;
-    $('winner-dialog').showModal();
+    openDialog('winner-dialog');
+  } else {
+    scheduleComputerTurn();
   }
 }
 
 function setMode(next) {
-  if (game.winner !== null || (next === 'wall' && game.remaining[game.turn] === 0)) return;
+  if (game.winner !== null || isComputerTurn() || (next === 'wall' && game.remaining[game.turn] === 0)) return;
   mode = next;
   selected = null;
   render();
@@ -183,7 +231,9 @@ function rotate(next) {
   render();
 }
 
-function restart() {
+function restart(nextMatchMode = matchMode) {
+  stopComputerTurn();
+  matchMode = nextMatchMode;
   document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close());
   game = createGame();
   history = [];
@@ -194,27 +244,38 @@ function restart() {
   render();
 }
 
+function requestNewGame(nextMatchMode = matchMode) {
+  if (game.ply === 0) { restart(nextMatchMode); return; }
+  restartMode = nextMatchMode;
+  $('restart-title').textContent = nextMatchMode === matchMode ? '重新開始這一局？' : `切換到${nextMatchMode === 'solo' ? '單人對電腦' : '同機雙人'}？`;
+  openDialog('restart-dialog');
+}
+
 $('mode-move').addEventListener('click', () => setMode('move'));
 $('mode-wall').addEventListener('click', () => setMode('wall'));
 $('horizontal').addEventListener('click', () => rotate('h'));
 $('vertical').addEventListener('click', () => rotate('v'));
 $('confirm-wall').addEventListener('click', () => {
-  if (!selected) return;
+  if (!selected || isComputerTurn() || game.winner !== null) return;
   const result = placeWall(game, selected);
   if (result.ok) commit(result.state);
   else announce(result.reason, true);
 });
 $('undo').addEventListener('click', () => {
   if (!history.length) return;
-  game = history.pop();
+  stopComputerTurn();
+  do { game = history.pop(); } while (matchMode === 'solo' && game.turn === 1 && history.length);
   mode = 'move';
   selected = null;
   render();
 });
-$('restart').addEventListener('click', () => { if (game.ply) $('restart-dialog').showModal(); else restart(); });
-$('confirm-restart').addEventListener('click', restart);
-$('play-again').addEventListener('click', restart);
-['help', 'footer-help'].forEach((id) => $(id).addEventListener('click', () => $('rules-dialog').showModal()));
+$('restart').addEventListener('click', () => requestNewGame());
+$('match-solo').addEventListener('click', () => { if (matchMode !== 'solo') requestNewGame('solo'); });
+$('match-local').addEventListener('click', () => { if (matchMode !== 'local') requestNewGame('local'); });
+$('confirm-restart').addEventListener('click', () => restart(restartMode));
+$('play-again').addEventListener('click', () => restart());
+['help', 'footer-help'].forEach((id) => $(id).addEventListener('click', () => openDialog('rules-dialog')));
+document.querySelectorAll('dialog').forEach((dialog) => dialog.addEventListener('close', scheduleComputerTurn));
 document.querySelectorAll('.close-dialog').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
 document.addEventListener('keydown', (event) => {
   if (document.querySelector('dialog[open]') || event.ctrlKey || event.metaKey || event.altKey || mode !== 'wall') return;
