@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111a20">
+  <meta name="description" content="一個人也能玩的步步為營網頁遊戲。你操作藍方，電腦自動移動與放牆，也能切換同機雙人模式。手機、電腦與離線皆可玩。">
+  <title>步步為營 · 迷宮對決</title>
+  <style>:root { color-scheme: dark; --bg: #111a20; --panel: #18242c; --ink: #f1f1e9; --dim: #9aa9b1; --line: #304049; --blue: #79d6ec; --pink: #f2a4b8; --accent: var(--blue); --accent-rgb: 121,214,236; font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: var(--bg); }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: default; opacity: .35; }
+button, a { touch-action: manipulation; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+[hidden] { display: none !important; }
+.game-app { max-width: 1160px; margin: 0 auto; padding: 0 48px; }
+.topbar { height: 104px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.brand { color: var(--ink); text-decoration: none; display: flex; gap: 14px; align-items: center; font-size: 20px; font-weight: 700; letter-spacing: 3px; }
+.brand small { font-size: 9px; font-weight: 500; letter-spacing: 2px; color: var(--dim); display: block; margin-top: 5px; }
+.brand-mark { width: 33px; height: 33px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; transform: rotate(-8deg); }
+.brand-mark i { background: #354954; border-radius: 3px; }
+.brand-mark i:nth-child(2) { background: var(--blue); }
+.brand-mark i:nth-child(3) { background: var(--pink); }
+.topbar-actions { display: flex; align-items: center; gap: 25px; }
+.mode-label { display: flex; gap: 9px; align-items: center; font-size: 12px; color: #c4ced0; }
+.mode-label > span { width: 5px; height: 5px; background: #b7c6a3; border-radius: 50%; box-shadow: 0 0 8px #b7c6a322; }
+.mode-label b { font-weight: 400; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 50%; background: none; width: 39px; height: 39px; font-size: 26px; color: var(--dim); }
+.icon-button:hover { color: var(--ink); border-color: #8a999e; }
+.intro { display: flex; align-items: end; justify-content: space-between; padding: 42px 0 35px; gap: 30px; }
+.eyebrow { font-size: 9px; line-height: 1.6; font-weight: 600; letter-spacing: 1.8px; color: var(--dim); margin: 0; }
+h1 { font-size: clamp(24px, 3.3vw, 34px); font-weight: 600; letter-spacing: 2px; line-height: 1.35; margin: 10px 0 0; }
+.intro-note { margin: 0 0 3px; color: var(--dim); font-size: 12px; line-height: 1.9; }
+.arena { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 64px; align-items: start; }
+.table { max-width: 600px; min-width: 0; }
+.player-rail { display: flex; align-items: center; justify-content: space-between; padding: 13px 15px; gap: 12px; border-radius: 8px; border: 1px solid transparent; transition: background .2s, border-color .2s; }
+.pink { --player-color: var(--pink); }
+.blue { --player-color: var(--blue); }
+.player-rail.active { border-color: #40535e; background: #1c2a32; }
+.player-name { display: flex; align-items: center; gap: 11px; }
+.player-name strong { font-size: 13px; letter-spacing: 1px; font-weight: 600; }
+.player-name small { display: block; font-size: 10px; color: var(--dim); margin-top: 4px; }
+.mini-pawn { display: block; width: 19px; height: 25px; border-radius: 50% 50% 45% 45%; background: radial-gradient(circle at 35% 24%, #ffffffa6, transparent 43%), var(--player-color); box-shadow: inset -3px -4px 4px #0004, 0 3px 3px #0004; }
+.wall-inventory { display: flex; align-items: center; gap: 13px; }
+.wall-sticks { display: flex; gap: 4px; }
+.wall-sticks i { width: 4px; height: 19px; border-radius: 1px; background: var(--player-color); opacity: .72; box-shadow: inset 1px 0 0 #fff3; }
+.wall-sticks i.used { background: #36454e; box-shadow: none; opacity: .6; }
+.wall-count { font-size: 10px; color: var(--dim); min-width: 35px; text-align: right; font-variant-numeric: tabular-nums; }
+.wall-count b { color: var(--player-color); font-size: 14px; font-weight: 500; margin-right: 3px; }
+.board-shell { position: relative; padding: 20px 18px 23px; margin: 9px 0; border: 1px solid #45535b; border-bottom: 4px solid #25343e; border-radius: 12px; background: linear-gradient(145deg, #3a474f, #202d35 60%, #2c3a42); box-shadow: 0 18px 35px #0003, 0 3px 0 #0a1118, inset 0 1px 0 #70818d44; }
+.coordinate-row { display: grid; grid-template-columns: repeat(9, 1fr); padding-bottom: 9px; color: #91a0a6; font-size: 8px; font-family: ui-monospace, monospace; text-align: center; }
+.board { aspect-ratio: 1; position: relative; background: #101b22; border-radius: 3px; box-shadow: 0 0 0 5px #111d254d; --gap: calc(100% / 53); }
+.tiles { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: repeat(9, minmax(0, 1fr)); gap: var(--gap); position: absolute; inset: 0; }
+.tile { padding: 0; position: relative; display: flex; align-items: center; justify-content: center; border: 1px solid #46555e; border-bottom-color: #16242c; border-right-color: #26353d; background: linear-gradient(145deg, #34434b, #2c3a42); border-radius: 3px; box-shadow: 0 2px 1px #0007, inset 0 1px 0 #64737a22; cursor: default; }
+.tile::after { content: ''; position: absolute; height: 15%; width: 15%; background: var(--accent); border-radius: 50%; opacity: 0; transform: scale(.5); transition: transform .15s, opacity .15s; }
+.tile.legal { cursor: pointer; background: linear-gradient(145deg, #3b505b, #30444d); }
+.tile.legal::after { opacity: .85; transform: scale(1); box-shadow: 0 0 12px #79d6ec33; }
+.tile.legal:hover { border-color: var(--accent); }
+.tile.legal:hover::after { transform: scale(1.3); }
+.tile:focus-visible { outline-offset: -2px; z-index: 8; }
+.tile:disabled { opacity: 1; }
+.pawn { width: 57%; height: 68%; border-radius: 50% 50% 44% 44%; position: relative; z-index: 2; transform: translateY(-7%); background: radial-gradient(ellipse at 34% 23%, #fff9 0, #fff1 35%, transparent 56%), var(--player-color); box-shadow: inset -3px -5px 5px #0004, 0 5px 3px #0007; }
+.pawn::after { content: ''; position: absolute; left: 20%; right: 20%; bottom: 12%; height: 7%; border-radius: 50%; background: #fff3; }
+.tile.current::before { content: ''; position: absolute; inset: 6%; border-radius: 50%; border: 1px solid var(--accent); opacity: .35; }
+.walls, .wall-targets { position: absolute; inset: 0; pointer-events: none; }
+.wall { position: absolute; z-index: 3; background: var(--player-color, var(--accent)); border-radius: 2px; box-shadow: inset 0 2px 0 #fff5, inset 0 -2px 0 #0003, 0 3px 4px #0009; pointer-events: none; }
+.wall.v { box-shadow: inset 2px 0 0 #fff5, inset -2px 0 0 #0003, 2px 2px 4px #0009; }
+.wall-target { position: absolute; border: 0; background: transparent; pointer-events: auto; padding: 0; z-index: 5; border-radius: 4px; }
+.wall-target::after { content: ''; width: 4px; height: 4px; border-radius: 1px; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #b9cbd0; opacity: .45; }
+.wall-target:focus-visible { outline-offset: -2px; }
+.ghost { z-index: 6; opacity: .7; box-shadow: 0 0 0 1px #fff8, 0 0 15px var(--accent); }
+.ghost.invalid { background: #ff7c78; box-shadow: 0 0 0 1px #ffb1a8, 0 0 12px #ff7c7866; }
+.board.wall-mode .tile { cursor: default; }
+.goal { position: absolute; left: 38%; right: 38%; height: 2px; text-align: center; background: var(--goal-color); box-shadow: 0 0 10px var(--goal-color); opacity: .9; }
+.goal span { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 2px; background: #2d3a43; padding: 0 8px; white-space: nowrap; color: var(--goal-color); }
+.goal-blue { top: 4px; --goal-color: var(--blue); }
+.goal-pink { bottom: 10px; --goal-color: var(--pink); }
+.dashboard { padding-top: 15px; }
+.opponent-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; margin-bottom: 22px; border: 1px solid var(--line); border-radius: 8px; }
+.opponent-picker button { min-height: 36px; border: 0; border-radius: 4px; background: transparent; color: var(--dim); font-size: 11px; }
+.opponent-picker button[aria-pressed=true] { background: #30434e; color: var(--ink); }
+.online-panel { padding: 16px; background: #1b2a33; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 25px; }
+.online-panel input { width: 100%; min-width: 0; min-height: 42px; border: 1px solid #526671; border-radius: 5px; background: #111e27; color: var(--ink); padding: 9px; font: inherit; font-size: 12px; }
+.online-panel input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.join-form { margin-top: 16px; }.join-form label { display: block; font-size: 10px; color: var(--dim); margin-bottom: 9px; }.join-form > div { display: grid; grid-template-columns: 1fr 64px; gap: 7px; }.join-form input { text-transform: uppercase; letter-spacing: 2px; }.join-form .secondary-button { min-height: 42px; }
+.room-heading { display: flex; justify-content: space-between; align-items: center; }.room-heading small { display: block; font-size: 10px; color: var(--dim); }.room-heading strong { display: block; font: 24px ui-monospace, monospace; letter-spacing: 3px; margin-top: 8px; color: var(--accent); }.room-heading .text-button { margin: 0; }
+#room-seat { font-size: 11px; color: var(--dim); margin: 12px 0; }#invite-link { font-size: 10px; min-height: 36px; margin-bottom: 9px; }#copy-room { font-size: 11px; min-height: 36px; }#room-message { font-size: 11px; line-height: 1.8; margin: 13px 0 0; color: #c8d4d9; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.wall-placement-bar { display: grid; grid-template-columns: minmax(0,1fr) 72px 132px; align-items: center; gap: 9px; padding: 12px; margin: 12px 0; border: 1px solid var(--accent); border-radius: 9px; background: #1c303b; box-shadow: 0 5px 20px #0006; z-index: 20; }
+.wall-placement-bar strong { font-size: 13px; }.wall-placement-bar small { display: block; font-size: 10px; color: var(--dim); margin-top: 5px; }.wall-placement-bar .secondary-button { font-size: 12px; }.wall-placement-bar .primary-button { font-size: 13px; padding: 10px 6px; }
+.turn-heading { display: flex; justify-content: space-between; align-items: center; }
+.move-number { color: var(--dim); font-family: ui-monospace, "Microsoft JhengHei", monospace; font-size: 10px; }
+.turn-title { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+.turn-orb { background: var(--accent); width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 5px rgba(var(--accent-rgb),.08); }
+h2 { font-size: 25px; letter-spacing: 1px; font-weight: 600; margin: 0; }
+.turn-caption { color: var(--dim); font-size: 12px; line-height: 1.7; margin: 11px 0 26px; }
+.action-picker { display: grid; gap: 10px; }
+.action { display: flex; align-items: center; gap: 15px; text-align: left; width: 100%; background: #18242c; border: 1px solid #33424c; border-radius: 8px; padding: 17px; }
+.action > svg { color: var(--dim); width: 24px; height: 24px; }
+.action > span:not(.action-dot) { font-size: 14px; letter-spacing: .5px; font-weight: 500; }
+.action small { display: block; font-size: 10px; font-weight: 400; color: var(--dim); margin-top: 5px; letter-spacing: .5px; }
+.action-dot { margin-left: auto; width: 13px; height: 13px; border: 1px solid #60717b; border-radius: 50%; }
+.action.active { border-color: var(--accent); background: rgba(var(--accent-rgb),.06); }
+.action.active > svg { color: var(--accent); }
+.action.active .action-dot { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 3px #21333d; }
+.action:hover:not(:disabled) { border-color: var(--accent); }
+.wall-controls { margin-top: 20px; }
+.orientation-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-bottom: 10px; }
+.keyboard-hint { font-size: 10px; opacity: .7; }
+.orientation-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.orientation-picker button { background: #1a2831; border: 1px solid var(--line); border-radius: 5px; min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 12px; }
+.orientation-picker [aria-pressed=true] { color: var(--accent); border-color: var(--accent); }
+.direction-icon { width: 18px; height: 3px; display: inline-block; background: currentColor; border-radius: 1px; }
+.direction-icon.vertical { width: 3px; height: 18px; }
+.primary-button { background: var(--accent); color: #15252e; border: 0; min-height: 46px; width: 100%; border-radius: 6px; font-size: 13px; font-weight: 700; padding: 10px 18px; }
+.primary-button:hover:not(:disabled) { filter: brightness(1.1); }
+.instruction { display: flex; align-items: start; gap: 10px; margin-top: 19px; min-height: 59px; color: var(--dim); }
+.instruction-icon { width: 20px; flex-shrink: 0; font-size: 19px; color: var(--accent); }
+.instruction p { font-size: 11px; line-height: 1.9; margin: 0; }
+.instruction.error p, .instruction.error .instruction-icon { color: #ffaaa2; }
+.match-tools { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 15px 0; }
+.match-tools button { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 11px; border: 0; background: transparent; padding: 5px 0; color: #c0cbd0; min-height: 32px; }
+.match-tools button + button { border-left: 1px solid var(--line); }
+.match-tools svg { width: 16px; height: 16px; }
+.match-tools button:hover:not(:disabled) { color: var(--accent); }
+.quick-rule { padding: 27px 0 0; }
+.rule-number { font-size: 9px; letter-spacing: 1.5px; color: #a9b49e; }
+.quick-rule p { font-size: 13px; margin: 14px 0 18px; color: #d4dcd6; }
+.quick-rule small { font-size: 10px; color: var(--dim); }
+.rule-line { display: flex; align-items: center; width: 100%; max-width: 185px; gap: 12px; margin-bottom: 17px; }
+.rule-start { display: block; width: 9px; height: 11px; border-radius: 50% 50% 40% 40%; background: #c3ceb9; }
+.rule-dash { flex: 1; height: 1px; border-top: 1px dashed #6d7e80; }
+.rule-finish { color: #c3ceb9; font-size: 20px; }
+footer { border-top: 1px solid var(--line); margin: 32px 0 0; padding: 22px 0 28px; display: flex; justify-content: space-between; align-items: center; gap: 15px; font-size: 10px; color: var(--dim); }
+footer button { border: 0; background: none; font-size: 10px; color: #c7d0d1; padding: 7px 0; }
+footer button span { margin-left: 8px; color: var(--accent); }
+dialog { background: #1c2932; color: var(--ink); border: 1px solid #495b66; border-radius: 16px; padding: 30px; width: min(500px, calc(100% - 32px)); max-height: 90dvh; box-shadow: 0 30px 100px #0009; }
+dialog::backdrop { background: #050d14bd; backdrop-filter: blur(5px); }
+.dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 10px; }
+.dialog-head .icon-button { flex-shrink: 0; width: 32px; height: 32px; }
+dialog h2 { font-size: 23px; margin-top: 9px; }
+.dialog-intro { color: #b3c0c8; font-size: 13px; line-height: 1.9; margin: 14px 0 22px; }
+.rule-list { padding-left: 24px; display: grid; gap: 19px; margin: 25px 0; }
+.rule-list li { padding-left: 7px; }
+.rule-list li::marker { color: var(--accent); font-size: 13px; }
+.rule-list strong { font-size: 13px; font-weight: 600; }
+.rule-list p { font-size: 12px; line-height: 1.85; color: #b3c0c8; margin: 6px 0 0; }
+.keyboard-note { font-size: 10px; color: var(--dim); line-height: 1.8; margin-bottom: 23px; }
+.dialog-actions { display: flex; gap: 12px; }
+.secondary-button { border: 1px solid #526671; background: transparent; border-radius: 6px; min-height: 46px; width: 100%; font-size: 13px; }
+.text-button { display: block; margin: 16px auto 0; border: 0; background: transparent; font-size: 12px; color: var(--dim); padding: 5px; }
+#winner-dialog { text-align: center; }
+.victory-art { position: relative; height: 135px; display: flex; align-items: center; justify-content: center; }
+.victory-orb { width: 53px; height: 68px; background: radial-gradient(ellipse at 35% 25%, #ffffffa0, transparent 50%), var(--accent); border-radius: 50% 50% 44% 44%; box-shadow: inset -6px -7px 8px #0005, 0 10px 25px #0005; animation: arrive .6s ease-out; }
+.victory-art i { position: absolute; width: 7px; height: 7px; background: var(--accent); transform: rotate(25deg); opacity: .65; }
+.victory-art i:nth-of-type(1) { left: 30%; top: 26%; }.victory-art i:nth-of-type(2) { right: 27%; top: 37%; width: 4px; height: 10px; }.victory-art i:nth-of-type(3) { left: 34%; bottom: 15%; width: 4px; height: 4px; }
+@keyframes arrive { from { opacity: 0; transform: translateY(15px) scale(.8); } to { opacity: 1; transform: none; } }
+@media (max-width: 940px) { .game-app { padding: 0 28px; }.arena { gap: 32px; grid-template-columns: minmax(0, 1fr) 260px; }.intro-note { display: none; }.wall-sticks { gap: 3px; }.wall-sticks i { width: 3px; } }
+@media (max-width: 700px) {
+  .wall-placement-bar { position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); margin: 0; grid-template-columns: minmax(0,1fr) 66px 120px; gap: 7px; }
+  body.wall-placement-active { padding-bottom: 100px; }
+  .game-app { padding: 0 18px; max-width: 560px; }.topbar { height: 77px; }.brand { font-size: 17px; gap: 11px; }.brand small { font-size: 7px; }.brand-mark { width: 28px; height: 28px; gap: 4px; }.topbar-actions { gap: 15px; }.mode-label { font-size: 10px; }.icon-button { width: 33px; height: 33px; }.intro { padding: 25px 0 21px; }.intro .eyebrow { font-size: 7px; letter-spacing: 1.1px; }h1 { font-size: 25px; letter-spacing: 1px; margin-top: 9px; }.arena { display: flex; flex-direction: column; gap: 22px; }.table { width: 100%; }.player-rail { padding: 9px 12px; }.player-name strong { font-size: 12px; }.player-name small { font-size: 9px; }.wall-sticks { gap: 4px; }.wall-sticks i { width: 4px; height: 16px; }.board-shell { padding: 19px 13px 21px; margin: 7px 0; }.coordinate-row { padding-bottom: 7px; }.tile { border-radius: 2px; }.goal span { font-size: 7px; }.dashboard { width: 100%; padding: 0; }.turn-heading { float: right; flex-direction: column; align-items: end; gap: 5px; padding-top: 1px; }.turn-heading .eyebrow { font-size: 8px; }.turn-title { margin: 0 0 8px; }h2 { font-size: 22px; }.turn-caption { font-size: 11px; margin: 0 0 18px; }.action-picker { grid-template-columns: 1fr 1fr; gap: 10px; }.action { padding: 13px 12px; gap: 10px; }.action > span:not(.action-dot) { font-size: 12px; }.action small { font-size: 9px; }.action > svg { width: 21px; height: 21px; }.action-dot { display: none; }.instruction { min-height: 43px; margin-top: 15px; }.wall-controls { margin-top: 16px; }.wall-controls .orientation-picker { grid-template-columns: 1fr 1fr; }.quick-rule { display: none; }.match-tools { padding: 10px 0; }.match-tools button { font-size: 11px; }.wall-target::after { width: 3px; height: 3px; }.keyboard-hint { display: none; }footer { margin-top: 26px; border-top: 0; padding-top: 0; flex-direction: column; gap: 4px; font-size: 9px; }dialog { padding: 24px; }.wall-count { min-width: 33px; }.wall-inventory { gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+  <div class="game-app">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="步步為營首頁"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>步步為營<small>QUORIDOR / DUEL</small></span></a>
+      <div class="topbar-actions"><span class="mode-label"><span></span><b id="match-label">單人對電腦</b></span><button class="icon-button" id="help" aria-label="查看遊戲規則"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.7 8.7a2.5 2.5 0 0 1 4.8 1c0 1.8-2.5 2-2.5 3.8M12 16.5v.2"/></svg></button></div>
+    </header>
+    <main>
+      <div class="intro"><div><p class="eyebrow">THE SHORTEST WAY ISN’T ALWAYS STRAIGHT.</p><h1>一步前進，一牆逆轉。</h1></div><p class="intro-note">為自己找路，也讓對手繞點路。<br>先走到對面底線，就贏了。</p></div>
+      <div class="arena">
+        <section class="table" aria-label="遊戲棋盤">
+          <div class="player-rail pink" id="player-1"><div class="player-name"><span class="mini-pawn" aria-hidden="true"></span><div><strong>粉紅方</strong><small>往下方底線 ↓</small></div></div><div class="wall-inventory"><div class="wall-sticks" aria-hidden="true"></div><span class="wall-count"></span></div></div>
+          <div class="board-shell">
+            <div class="goal goal-blue" aria-hidden="true"><span>藍方終點</span></div>
+            <div class="coordinate-row" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span><span>I</span></div>
+            <div class="board" id="board" aria-label="9 乘 9 棋盤">
+              <div class="tiles" id="tiles"></div><div class="walls" id="walls" aria-hidden="true"></div><div class="wall-targets" id="wall-targets" hidden></div><div class="wall ghost" id="ghost" hidden aria-hidden="true"></div>
+            </div>
+            <div class="goal goal-pink" aria-hidden="true"><span>粉紅方終點</span></div>
+          </div>
+          <div class="wall-placement-bar" id="wall-placement-bar" hidden><div><strong>放置牆壁</strong><small id="wall-place-status">先點棋盤縫隙</small></div><button id="rotate-wall-now" class="secondary-button" aria-label="旋轉預覽牆壁">旋轉 ↻</button><button id="place-wall-now" class="primary-button" disabled>確認放置 ✓</button></div>
+          <div class="player-rail blue" id="player-0"><div class="player-name"><span class="mini-pawn" aria-hidden="true"></span><div><strong>藍方</strong><small>往上方底線 ↑</small></div></div><div class="wall-inventory"><div class="wall-sticks" aria-hidden="true"></div><span class="wall-count"></span></div></div>
+        </section>
+        <aside class="dashboard" aria-label="遊戲操作">
+          <div class="opponent-picker" role="group" aria-label="對戰模式"><button id="match-solo" aria-pressed="true">對電腦</button><button id="match-local" aria-pressed="false">同機雙人</button><button id="match-online" aria-pressed="false">好友連線</button></div>
+          <section id="online-panel" class="online-panel" aria-label="線上房間" hidden>
+            <div id="room-lobby"><button id="create-room" class="primary-button">建立房間，邀請朋友</button><form id="join-form" class="join-form"><label for="join-code">或輸入朋友的房號</label><div><input id="join-code" name="room" maxlength="6" placeholder="六碼房號" autocomplete="off" autocapitalize="characters" spellcheck="false" required aria-label="六碼房號"><button id="join-room" class="secondary-button" type="submit">加入</button></div></form></div>
+            <div id="room-active" hidden><div class="room-heading"><div><small>房間號碼</small><strong id="room-code"></strong></div><button id="leave-room" class="text-button">離開</button></div><p id="room-seat"></p><label for="invite-link" class="sr-only">朋友的邀請連結</label><input id="invite-link" readonly aria-label="朋友的邀請連結"><button id="copy-room" class="secondary-button">複製邀請連結</button></div>
+            <p id="room-message" role="status" aria-live="polite">建立房間，把邀請連結傳給朋友。</p>
+          </section>
+          <div class="turn-heading"><span class="eyebrow" id="turn-eyebrow">YOUR TURN</span><span class="move-number" id="move-number">第 001 手</span></div>
+          <div class="turn-title"><span class="turn-orb" aria-hidden="true"></span><h2 id="turn-title">藍方的回合</h2></div>
+          <p class="turn-caption" id="turn-caption">往前一步，或讓對手多繞一步。</p>
+          <div class="action-picker" aria-label="選擇行動"><button class="action active" id="mode-move" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-6 6 6-6 6 6"/></svg><span>移動棋子<small>走出下一步</small></span><span class="action-dot"></span></button><button class="action" id="mode-wall" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1"/><path d="M4 12h16M12 6v6m-5 0v6m10-6v6"/></svg><span>放置牆壁<small>改變對手的路</small></span><span class="action-dot"></span></button></div>
+          <div class="wall-controls" id="wall-controls" hidden><div class="orientation-label"><span>牆壁方向</span><span class="keyboard-hint">R 旋轉</span></div><div class="orientation-picker"><button id="horizontal" aria-pressed="true"><span class="direction-icon horizontal"></span>橫向</button><button id="vertical" aria-pressed="false"><span class="direction-icon vertical"></span>直向</button></div><button id="confirm-wall" class="primary-button" disabled>先選擇放牆位置</button></div>
+          <div class="instruction" id="instruction" role="status" aria-live="polite"><span class="instruction-icon" aria-hidden="true">↗</span><p id="instruction-text">點選棋盤上的亮點，移動你的棋子。</p></div>
+          <div class="match-tools"><button id="undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5-5 5 5 5M4 10h9a6 6 0 0 1 6 6v2"/></svg><span id="undo-label">悔一回合</span></button><button id="restart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M5 8a8 8 0 0 1 13-2l2 3M4 15l2 3a8 8 0 0 0 13-2"/></svg><span id="restart-label">重新開始</span></button></div>
+          <div class="quick-rule"><span class="rule-number">01 / 目標</span><p>先到彼岸的人，贏下這場對決。</p><div class="rule-line"><span class="rule-start"></span><span class="rule-dash"></span><span class="rule-finish">↗</span></div><small>每回合只能走一步或放一面牆。</small></div>
+        </aside>
+      </div>
+      <footer><span>單人也能對決 · 離線也能玩</span><button id="footer-help">第一次玩？看看規則 <span aria-hidden="true">↗</span></button></footer>
+    </main>
+  </div>
+  <dialog id="rules-dialog" aria-labelledby="rules-title"><div class="dialog-head"><p class="eyebrow">HOW TO PLAY</p><button class="icon-button close-dialog" aria-label="關閉規則">×</button></div><h2 id="rules-title">好上手，有點傷腦筋。</h2><p class="dialog-intro" id="rules-intro">你操作藍方先手，電腦操作粉紅方。完全離線也能對戰。</p><ol class="rule-list"><li><strong>先走到對面，就贏了</strong><p>從中央起點出發，抵達對面底線的任意一格即可獲勝。</p></li><li><strong>移動，或放牆，二選一</strong><p>棋子每次上下左右走一格，不能穿牆。每人有 10 道牆，每道橫跨兩格；選擇方向與位置後，按「確認放置」。牆放下後，雙方都不能穿越，也不能移動它。</p></li><li><strong>相遇時，可以跳過對方</strong><p>與對方相鄰且中間無牆時，可以直線跳過。若對方後方有牆或棋盤邊界，才能改走其兩側可通行的斜格。</p></li><li><strong>可以繞路，不能封死</strong><p>牆不能重疊或交叉，而且雙方都必須留有至少一條通往終點的路。遊戲會自動檢查。</p></li></ol><p class="keyboard-note">鍵盤：Tab 選取、Enter 操作；放牆時可用方向鍵選位置、R 旋轉、Esc 取消預覽。</p><button class="primary-button close-dialog">知道了，來一局</button></dialog>
+  <dialog id="restart-dialog" aria-labelledby="restart-title"><p class="eyebrow">A FRESH START</p><h2 id="restart-title">重新開始這一局？</h2><p class="dialog-intro">棋子與牆壁將回到初始狀態，由藍方先手。</p><div class="dialog-actions"><button class="secondary-button close-dialog">繼續這局</button><button class="primary-button" id="confirm-restart">重新開始</button></div></dialog>
+  <dialog id="leave-dialog" aria-labelledby="leave-title"><p class="eyebrow">LEAVE ROOM</p><h2 id="leave-title">離開線上房間？</h2><p class="dialog-intro">離開會結束這個房間。若只是暫時斷線或重新整理，則可以回到原來的棋局。</p><div class="dialog-actions"><button class="secondary-button close-dialog">繼續對弈</button><button class="primary-button" id="confirm-leave">離開房間</button></div></dialog>
+  <dialog id="winner-dialog" aria-labelledby="winner-title"><div class="dialog-head"><p class="eyebrow">THE OTHER SIDE, AT LAST.</p><button class="icon-button close-dialog" aria-label="檢視棋盤">×</button></div><div class="victory-art" aria-hidden="true"><span class="victory-orb"></span><i></i><i></i><i></i></div><h2 id="winner-title">藍方獲勝！</h2><p class="dialog-intro" id="winner-detail"></p><button class="primary-button" id="play-again">再來一局</button><button class="text-button close-dialog">留下來看看棋盤</button></dialog>
+  <script type="module">const SIZE = 9;
+const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+const same = (a, b) => a.r === b.r && a.c === b.c;
+const inside = ({ r, c }) => Number.isInteger(r) && Number.isInteger(c) && r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+
+function createGame() {
+  return { pawns: [{ r: 8, c: 4 }, { r: 0, c: 4 }], walls: [], remaining: [10, 10], turn: 0, winner: null, ply: 0 };
+}
+
+function canStep(a, b, walls) {
+  if (!inside(a) || !inside(b) || Math.abs(a.r - b.r) + Math.abs(a.c - b.c) !== 1) return false;
+  return !walls.some((w) => a.r !== b.r
+    ? w.o === 'h' && w.r === Math.min(a.r, b.r) && (a.c === w.c || a.c === w.c + 1)
+    : w.o === 'v' && w.c === Math.min(a.c, b.c) && (a.r === w.r || a.r === w.r + 1));
+}
+
+function legalMoves(game, player = game.turn) {
+  if (game.winner !== null) return [];
+  const pawn = game.pawns[player];
+  const other = game.pawns[1 - player];
+  const moves = [];
+  for (const [dr, dc] of directions) {
+    const next = { r: pawn.r + dr, c: pawn.c + dc };
+    if (!canStep(pawn, next, game.walls)) continue;
+    if (!same(next, other)) {
+      moves.push(next);
+      continue;
+    }
+    const jump = { r: other.r + dr, c: other.c + dc };
+    if (canStep(other, jump, game.walls)) {
+      moves.push(jump);
+    } else {
+      // A diagonal is allowed only when a wall or board edge prevents a straight jump.
+      for (const [sr, sc] of [[dc, dr], [-dc, -dr]]) {
+        const side = { r: other.r + sr, c: other.c + sc };
+        if (canStep(other, side, game.walls)) moves.push(side);
+      }
+    }
+  }
+  return moves;
+}
+
+function hasPath(game, player, walls = game.walls) {
+  const goal = player === 0 ? 0 : SIZE - 1;
+  const queue = [game.pawns[player]];
+  const seen = new Set([queue[0].r * SIZE + queue[0].c]);
+  for (let i = 0; i < queue.length; i++) {
+    const cell = queue[i];
+    if (cell.r === goal) return true;
+    for (const [dr, dc] of directions) {
+      const next = { r: cell.r + dr, c: cell.c + dc };
+      const key = next.r * SIZE + next.c;
+      if (!seen.has(key) && canStep(cell, next, walls)) {
+        seen.add(key);
+        queue.push(next);
+      }
+    }
+  }
+  return false;
+}
+
+function validateWall(game, wall) {
+  if (game.winner !== null) return { ok: false, reason: '這局已經結束，開新局再挑戰吧。' };
+  if (game.remaining[game.turn] === 0) return { ok: false, reason: '牆已用完，請移動棋子。' };
+  if (!['h', 'v'].includes(wall.o) || !Number.isInteger(wall.r) || !Number.isInteger(wall.c) || wall.r < 0 || wall.r >= SIZE - 1 || wall.c < 0 || wall.c >= SIZE - 1) {
+    return { ok: false, reason: '牆必須放在棋盤內的縫隙。' };
+  }
+  const overlaps = game.walls.some((w) => w.o === wall.o
+    ? (w.o === 'h' ? w.r === wall.r && Math.abs(w.c - wall.c) < 2 : w.c === wall.c && Math.abs(w.r - wall.r) < 2)
+    : w.r === wall.r && w.c === wall.c);
+  if (overlaps) return { ok: false, reason: '牆不能重疊或交叉，換個位置試試。' };
+  const walls = [...game.walls, wall];
+  if (![0, 1].every((player) => hasPath(game, player, walls))) return { ok: false, reason: '這裡會封死道路，雙方都要留有通路。' };
+  return { ok: true };
+}
+
+function movePawn(game, target) {
+  if (!legalMoves(game).some((cell) => same(cell, target))) return { ok: false, reason: '請選擇亮點標示的可走位置。' };
+  const pawns = game.pawns.map((p, i) => i === game.turn ? { ...target } : p);
+  const winner = target.r === (game.turn === 0 ? 0 : SIZE - 1) ? game.turn : null;
+  return { ok: true, state: { ...game, pawns, winner, turn: winner === null ? 1 - game.turn : game.turn, ply: game.ply + 1 } };
+}
+
+function placeWall(game, wall) {
+  const result = validateWall(game, wall);
+  if (!result.ok) return result;
+  const remaining = game.remaining.map((count, i) => count - (i === game.turn ? 1 : 0));
+  return { ok: true, state: { ...game, walls: [...game.walls, { ...wall, owner: game.turn }], remaining, turn: 1 - game.turn, ply: game.ply + 1 } };
+}
+
+
+function distanceToGoal(game, player) {
+  const goal = player === 0 ? 0 : SIZE - 1;
+  const queue = [{ ...game.pawns[player], distance: 0 }];
+  const seen = new Set([queue[0].r * SIZE + queue[0].c]);
+  for (let i = 0; i < queue.length; i++) {
+    const cell = queue[i];
+    if (cell.r === goal) return cell.distance;
+    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      const next = { r: cell.r + dr, c: cell.c + dc, distance: cell.distance + 1 };
+      const key = next.r * SIZE + next.c;
+      if (!seen.has(key) && canStep(cell, next, game.walls)) {
+        seen.add(key);
+        queue.push(next);
+      }
+    }
+  }
+  return Infinity;
+}
+
+function chooseComputerAction(game) {
+  if (game.winner !== null) return null;
+  const player = game.turn;
+  const opponent = 1 - player;
+  const opponentGoal = opponent === 0 ? 0 : SIZE - 1;
+  let best = null;
+  let bestScore = -Infinity;
+
+  function consider(action, result) {
+    if (!result.ok) return;
+    const next = result.state;
+    const opponentCanWin = legalMoves(next, opponent).some((cell) => cell.r === opponentGoal);
+    // Compare race lengths, conserve walls on ties, and prevent an immediate loss.
+    const score = distanceToGoal(next, opponent) - distanceToGoal(next, player)
+      + (next.remaining[player] - next.remaining[opponent]) * 0.15
+      - (opponentCanWin ? 1000 : 0);
+    if (score > bestScore) { bestScore = score; best = action; }
+  }
+
+  for (const to of legalMoves(game)) {
+    const result = movePawn(game, to);
+    if (result.state.winner === player) return { type: 'move', to };
+    consider({ type: 'move', to }, result);
+  }
+  if (game.remaining[player] > 0) {
+    for (let r = 0; r < SIZE - 1; r++) for (let c = 0; c < SIZE - 1; c++) for (const o of ['h', 'v']) {
+      const wall = { r, c, o };
+      consider({ type: 'wall', wall }, placeWall(game, wall));
+    }
+  }
+  return best;
+}
+
+const ONLINE_ORIGIN = 'https://quoridor-duel-gy-1107.taupegecko2.chatgpt.site';
+const PLAY_URL = 'https://gyuyu2002-jeff.github.io/quoridor-web/';
+
+class RoomClient {
+  constructor(onChange, fetcher = (...args) => fetch(...args)) {
+    this.onChange = onChange;
+    this.fetcher = fetcher;
+    this.session = null;
+    this.snapshot = null;
+    this.connected = false;
+    this.busy = false;
+    this.error = '';
+    this.timer = null;
+    this.generation = 0;
+  }
+
+  async request(path, method = 'GET', body, session = this.session) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+    const response = await this.fetcher(`${ONLINE_ORIGIN}/api/rooms${path}`, {
+      method, headers, body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store', signal: AbortSignal.timeout(8000),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.error || '連線失敗，請再試一次。');
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  }
+
+  accept(snapshot) {
+    if (!this.snapshot || snapshot.revision >= this.snapshot.revision) this.snapshot = snapshot;
+    this.connected = true;
+    this.error = '';
+  }
+
+  async connect(code = '', restoreSession = null) {
+    const previous = this.session;
+    this.disconnect();
+    const generation = this.generation;
+    this.session = restoreSession || { code, token: previous?.code === code && code ? previous.token : crypto.randomUUID() };
+    this.busy = true;
+    this.onChange();
+    try {
+      const snapshot = restoreSession
+        ? await this.request(`/${code}`)
+        : await this.request(code ? `/${code}/join` : '', 'POST', { token: this.session.token });
+      if (generation !== this.generation) return;
+      this.session.code = snapshot.code;
+      this.accept(snapshot);
+    } catch (error) {
+      if (generation !== this.generation) return;
+      this.error = error.status ? error.message : '暫時連不上，請檢查網路後再試一次。';
+      if ([401, 403, 404, 409, 410].includes(error.status)) this.session = null;
+    } finally {
+      if (generation === this.generation) {
+        this.busy = false;
+        this.onChange();
+        if (this.session?.code) this.schedule();
+      }
+    }
+  }
+
+  schedule() {
+    clearTimeout(this.timer);
+    if (this.session?.code && !this.snapshot?.closed) this.timer = setTimeout(() => this.poll(), this.connected ? 1000 : 2500);
+  }
+
+  async poll() {
+    if (!this.session?.code) return;
+    const generation = this.generation;
+    try {
+      const snapshot = await this.request(`/${this.session.code}`);
+      if (generation !== this.generation) return;
+      this.accept(snapshot);
+    } catch (error) {
+      if (generation !== this.generation) return;
+      this.connected = false;
+      this.error = error.status ? error.message : '連線中斷，正在重新連線…';
+      if ([401, 403, 404, 410].includes(error.status)) this.session = null;
+    } finally {
+      if (generation === this.generation) { this.onChange(); this.schedule(); }
+    }
+  }
+
+  async act(operation, action = {}) {
+    if (!this.session || !this.snapshot || this.busy || !this.connected) return;
+    const generation = this.generation;
+    this.busy = true;
+    this.error = '';
+    this.onChange();
+    try {
+      const snapshot = await this.request(`/${this.session.code}/${operation}`, 'POST', { ...action, revision: this.snapshot.revision });
+      if (generation !== this.generation) return;
+      this.accept(snapshot);
+    } catch (error) {
+      if (generation !== this.generation) return;
+      this.error = error.status ? error.message : '操作尚未確認，正在重新同步棋局…';
+      this.connected = false;
+    } finally {
+      if (generation === this.generation) {
+        this.busy = false;
+        this.onChange();
+        if (!this.connected) await this.poll();
+        else this.schedule();
+      }
+    }
+  }
+
+  async leave() {
+    const session = this.session;
+    this.disconnect();
+    if (session?.code) {
+      try { await this.request(`/${session.code}/leave`, 'POST', {}, session); }
+      catch { /* A closed tab or lost connection is still shown as offline to the opponent. */ }
+    }
+  }
+
+  disconnect() {
+    this.generation++;
+    clearTimeout(this.timer);
+    this.timer = null;
+    this.session = null;
+    this.snapshot = null;
+    this.connected = false;
+    this.busy = false;
+    this.error = '';
+  }
+}
+
+
+const $ = (id) => document.getElementById(id);
+const names = ['藍方', '粉紅方'];
+const colors = ['blue', 'pink'];
+let game = createGame();
+let history = [];
+let mode = 'move';
+let orientation = 'h';
+let selected = null;
+let wallFocus = { r: 3, c: 3 };
+let matchMode = 'solo';
+let restartMode = matchMode;
+let computerTimer = null;
+let onlineRevision = -1;
+let onlineRound = 0;
+let exitMode = 'solo';
+const room = new RoomClient(onRoomChange);
+const cells = [];
+const targets = [];
+
+function canHumanPlay() {
+  if (game.winner !== null || isComputerTurn()) return false;
+  if (matchMode !== 'online') return true;
+  return room.connected && !room.busy && room.snapshot?.ready && !room.snapshot.closed && room.snapshot.player === game.turn;
+}
+
+function rememberRoom() {
+  try {
+    if (room.session?.code) sessionStorage.setItem('quoridor-room', JSON.stringify(room.session));
+    else sessionStorage.removeItem('quoridor-room');
+  } catch { /* Play still works when browser storage is unavailable. */ }
+}
+
+function onRoomChange() {
+  rememberRoom();
+  if (matchMode !== 'online') return;
+  const snapshot = room.snapshot;
+  let justWon = false;
+  if (snapshot && (snapshot.revision !== onlineRevision || snapshot.round !== onlineRound)) {
+    justWon = snapshot.game.winner !== null && (game.winner === null || onlineRound !== snapshot.round);
+    if (snapshot.round !== onlineRound || snapshot.closed) $('winner-dialog').close();
+    game = snapshot.game;
+    onlineRevision = snapshot.revision;
+    onlineRound = snapshot.round;
+    history = [];
+    selected = null;
+    mode = 'move';
+  }
+  render();
+  if (justWon && !snapshot.closed && !document.querySelector('dialog[open]')) showWinner();
+}
+
+function onlineMessage() {
+  if (room.error) return room.error;
+  const snapshot = room.snapshot;
+  if (!snapshot) return room.busy ? '正在連線…' : '建立房間，把邀請連結傳給朋友。';
+  if (snapshot.closed) return '房間已關閉。離開後可建立新房間。';
+  if (!room.connected) return '正在重新同步棋局，請稍候。';
+  if (!snapshot.ready) return '等待朋友加入，你是藍方先手。';
+  if (snapshot.rematchRequested[snapshot.player]) return '已邀請重新開局，等待朋友同意。';
+  if (snapshot.rematchRequested[1 - snapshot.player]) return '朋友邀請重新開局，按「同意重新開局」接受。';
+  if (!snapshot.opponentOnline) return '朋友暫時離線；棋局已保留，等待重新連線。';
+  return room.busy ? '正在確認你的操作…' : `你是${names[snapshot.player]}。${game.turn === snapshot.player ? '輪到你出手。' : '等待朋友出手。'}`;
+}
+
+function submitAction(type, value) {
+  if (!canHumanPlay()) return;
+  const result = type === 'move' ? movePawn(game, value) : placeWall(game, value);
+  if (!result.ok) { announce(result.reason, true); return; }
+  if (matchMode === 'online') room.act('actions', type === 'move' ? { type, to: value } : { type, wall: value });
+  else commit(result.state);
+}
+
+function isComputerTurn() {
+  return matchMode === 'solo' && game.turn === 1 && game.winner === null;
+}
+
+function stopComputerTurn() {
+  clearTimeout(computerTimer);
+  computerTimer = null;
+}
+
+function scheduleComputerTurn() {
+  stopComputerTurn();
+  if (!isComputerTurn() || document.querySelector('dialog[open]')) return;
+  computerTimer = setTimeout(() => {
+    computerTimer = null;
+    if (!isComputerTurn()) return;
+    const action = chooseComputerAction(game);
+    const result = action.type === 'move' ? movePawn(game, action.to) : placeWall(game, action.wall);
+    if (result.ok) commit(result.state);
+  }, 450);
+}
+
+function openDialog(id) {
+  stopComputerTurn();
+  $(id).showModal();
+}
+
+function wallPosition(element, wall) {
+  const horizontal = wall.o === 'h';
+  Object.assign(element.style, {
+    left: `${(wall.c * 6 + (horizontal ? 0 : 5)) / 53 * 100}%`,
+    top: `${(wall.r * 6 + (horizontal ? 5 : 0)) / 53 * 100}%`,
+    width: `${(horizontal ? 11 : 1) / 53 * 100}%`,
+    height: `${(horizontal ? 1 : 11) / 53 * 100}%`,
+  });
+}
+
+function announce(text, error = false) {
+  $('instruction-text').textContent = text;
+  $('instruction').classList.toggle('error', error);
+}
+
+function previewWall(wall) {
+  $('ghost').hidden = !wall;
+  if (!wall) return;
+  const result = validateWall(game, wall);
+  $('ghost').className = `wall ghost ${wall.o}${result.ok ? '' : ' invalid'}`;
+  wallPosition($('ghost'), wall);
+}
+
+function updateSelection() {
+  const result = selected ? validateWall(game, selected) : null;
+  $('confirm-wall').disabled = !result?.ok || !canHumanPlay();
+  $('place-wall-now').disabled = $('confirm-wall').disabled;
+  $('wall-place-status').textContent = selected ? (result.ok ? '位置已選好' : '這裡不能放牆') : '先點棋盤縫隙';
+  $('confirm-wall').textContent = selected ? (result.ok ? '確認放置 →' : '這裡不能放牆') : '先選擇放牆位置';
+  if (selected) announce(result.ok ? '位置選好了。按「確認放置」完成這一回合。' : result.reason, !result.ok);
+  else if (mode === 'wall') announce('點選棋盤縫隙預覽牆壁，再確認放置。');
+  previewWall(selected);
+}
+
+function selectWall(r, c) {
+  if (mode !== 'wall' || !canHumanPlay()) return;
+  selected = { r, c, o: orientation };
+  wallFocus = { r, c };
+  targets.forEach((button) => { button.tabIndex = Number(button.dataset.r) === r && Number(button.dataset.c) === c ? 0 : -1; });
+  updateSelection();
+}
+
+for (let r = 0; r < 9; r++) {
+  for (let c = 0; c < 9; c++) {
+    const button = document.createElement('button');
+    button.className = 'tile';
+    button.type = 'button';
+    button.dataset.r = r;
+    button.dataset.c = c;
+    button.addEventListener('click', () => {
+      if (mode === 'move') submitAction('move', { r, c });
+    });
+    $('tiles').append(button);
+    cells.push(button);
+  }
+}
+for (let r = 0; r < 8; r++) {
+  for (let c = 0; c < 8; c++) {
+    const button = document.createElement('button');
+    button.className = 'wall-target';
+    button.type = 'button';
+    button.dataset.r = r;
+    button.dataset.c = c;
+    Object.assign(button.style, { left: `${(c * 6 + 2.5) / 53 * 100}%`, top: `${(r * 6 + 2.5) / 53 * 100}%`, width: `${6 / 53 * 100}%`, height: `${6 / 53 * 100}%` });
+    button.addEventListener('pointerenter', (event) => { if (event.pointerType === 'mouse') previewWall({ r, c, o: orientation }); });
+    button.addEventListener('pointerleave', () => previewWall(selected));
+    button.addEventListener('click', () => selectWall(r, c));
+    button.addEventListener('keydown', (event) => {
+      const delta = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[event.key];
+      if (!delta) return;
+      event.preventDefault();
+      const nr = Math.max(0, Math.min(7, r + delta[0]));
+      const nc = Math.max(0, Math.min(7, c + delta[1]));
+      selectWall(nr, nc);
+      targets[nr * 8 + nc].focus();
+    });
+    $('wall-targets').append(button);
+    targets.push(button);
+  }
+}
+
+function render() {
+  const finished = game.winner !== null;
+  const thinking = isComputerTurn();
+  const solo = matchMode === 'solo';
+  const online = matchMode === 'online';
+  const canPlay = canHumanPlay();
+  const snapshot = room.snapshot;
+  $('match-label').textContent = online ? '好友線上對弈' : solo ? '單人對電腦' : '同機雙人';
+  $('match-solo').setAttribute('aria-pressed', String(solo));
+  $('match-local').setAttribute('aria-pressed', String(matchMode === 'local'));
+  $('match-online').setAttribute('aria-pressed', String(online));
+  $('online-panel').hidden = !online;
+  $('room-lobby').hidden = Boolean(snapshot);
+  $('room-active').hidden = !snapshot;
+  $('create-room').disabled = room.busy;
+  $('join-room').disabled = room.busy;
+  $('room-message').textContent = onlineMessage();
+  if (snapshot) {
+    $('room-code').textContent = snapshot.code;
+    $('invite-link').value = `${PLAY_URL}?room=${snapshot.code}`;
+    $('room-seat').textContent = `你是${names[snapshot.player]} · 第 ${snapshot.round} 局`;
+  }
+  $('rules-intro').textContent = online ? '建立房間或輸入朋友的六碼房號。藍方先手，雙方輪流操作；重新開局需要彼此同意。' : solo ? '你操作藍方先手，電腦操作粉紅方。完全離線也能對戰。' : '兩人共用一個畫面，藍方先手，輪流行動。';
+  $('undo-label').textContent = online ? '線上不提供悔棋' : solo ? '悔一回合' : '悔一步';
+  $('restart-label').textContent = online ? (snapshot?.rematchRequested[snapshot.player] ? '已邀請重新開局' : snapshot?.rematchRequested[1 - snapshot.player] ? '同意重新開局' : '邀請重新開局') : '重新開始';
+  $('restart').disabled = online && (!snapshot?.ready || snapshot.closed || room.busy || !room.connected || snapshot.rematchRequested[snapshot.player]);
+  $('turn-eyebrow').textContent = online ? 'ONLINE DUEL' : thinking ? 'COMPUTER TURN' : 'YOUR TURN';
+  $('board').setAttribute('aria-busy', String(thinking || (online && room.busy)));
+  document.documentElement.style.setProperty('--accent', `var(--${colors[game.turn]})`);
+  document.documentElement.style.setProperty('--accent-rgb', game.turn === 0 ? '121,214,236' : '242,164,184');
+  const moves = legalMoves(game);
+  cells.forEach((button, index) => {
+    const r = Math.floor(index / 9), c = index % 9;
+    const occupant = game.pawns.findIndex((p) => p.r === r && p.c === c);
+    const legal = canPlay && mode === 'move' && moves.some((p) => p.r === r && p.c === c);
+    button.className = `tile${legal ? ' legal' : ''}${occupant === game.turn && !finished ? ' current' : ''}`;
+    button.tabIndex = legal ? 0 : -1;
+    button.disabled = !canPlay;
+    button.setAttribute('aria-label', `${String.fromCharCode(65 + c)}${r + 1}${occupant >= 0 ? `，${names[occupant]}棋子` : ''}${legal ? '，可以移動到這裡' : ''}`);
+    button.replaceChildren();
+    if (occupant >= 0) {
+      const pawn = document.createElement('span');
+      pawn.className = `pawn ${colors[occupant]}`;
+      pawn.setAttribute('aria-hidden', 'true');
+      button.append(pawn);
+    }
+  });
+  $('walls').replaceChildren();
+  game.walls.forEach((wall) => {
+    const element = document.createElement('span');
+    element.className = `wall ${wall.o} ${colors[wall.owner]}`;
+    wallPosition(element, wall);
+    $('walls').append(element);
+  });
+  [0, 1].forEach((player) => {
+    const rail = $(`player-${player}`);
+    rail.querySelector('.player-name strong').textContent = online && snapshot ? `${snapshot.player === player ? '你' : '朋友'} · ${names[player]}` : solo ? `${player === 0 ? '你' : '電腦'} · ${names[player]}` : names[player];
+    rail.classList.toggle('active', game.turn === player);
+    rail.querySelector('.wall-count').innerHTML = `<b>${game.remaining[player]}</b> / 10`;
+    const sticks = rail.querySelector('.wall-sticks');
+    sticks.replaceChildren();
+    for (let i = 0; i < 10; i++) {
+      const stick = document.createElement('i');
+      stick.className = i >= game.remaining[player] ? 'used' : '';
+      sticks.append(stick);
+    }
+    rail.setAttribute('aria-label', `${names[player]}，剩餘 ${game.remaining[player]} 道牆${game.turn === player ? '，目前回合' : ''}`);
+  });
+  $('move-number').textContent = finished ? `共 ${game.ply} 手` : `第 ${String(game.ply + 1).padStart(3, '0')} 手`;
+  $('turn-title').textContent = finished ? winnerTitle() : online ? (snapshot?.closed ? '房間已結束' : !snapshot?.ready ? '等待朋友加入' : !room.connected ? '正在重新連線…' : room.busy ? '正在送出操作…' : canPlay ? '輪到你了' : '等待朋友出手') : (solo ? (thinking ? '電腦思考中…' : '輪到你了') : `${names[game.turn]}的回合`);
+  $('turn-caption').textContent = online ? (snapshot ? `你是${names[snapshot.player]}，棋局會自動同步。` : '不同裝置，也能坐在同一張棋盤前。') : finished ? '對局結束，再來挑戰一局。' : (solo ? (thinking ? '正在選擇路線與放牆位置。' : '你是藍方，粉紅方由電腦自動操作。') : '往前一步，或讓對手多繞一步。');
+  $('mode-move').disabled = !canPlay;
+  $('mode-wall').disabled = !canPlay || game.remaining[game.turn] === 0;
+  for (const action of ['move', 'wall']) {
+    $(`mode-${action}`).classList.toggle('active', mode === action);
+    $(`mode-${action}`).setAttribute('aria-pressed', String(mode === action));
+  }
+  $('wall-controls').hidden = mode !== 'wall' || !canPlay;
+  $('wall-targets').hidden = mode !== 'wall' || !canPlay;
+  $('wall-placement-bar').hidden = mode !== 'wall' || !canPlay;
+  document.body.classList.toggle('wall-placement-active', !$('wall-placement-bar').hidden);
+  $('board').classList.toggle('wall-mode', mode === 'wall');
+  $('horizontal').setAttribute('aria-pressed', String(orientation === 'h'));
+  $('vertical').setAttribute('aria-pressed', String(orientation === 'v'));
+  targets.forEach((button) => {
+    const r = Number(button.dataset.r), c = Number(button.dataset.c);
+    button.tabIndex = r === wallFocus.r && c === wallFocus.c ? 0 : -1;
+    button.setAttribute('aria-label', `在 ${String.fromCharCode(65 + c)}${r + 1} ${orientation === 'h' ? '下方放橫牆' : '右方放直牆'}，預覽位置`);
+  });
+  $('undo').disabled = online || history.length === 0;
+  updateSelection();
+  if (mode === 'move') announce(online ? onlineMessage() : finished ? '對局結束。可以重新開始，或悔棋檢視其他走法。' : (thinking ? '電腦會自動行動，稍等一下就輪到你。' : `${solo ? '輪到你了' : names[game.turn]}，點選棋盤上的亮點移動。${game.remaining[game.turn] === 0 ? '你的牆已用完。' : ''}`));
+}
+
+function winnerTitle() {
+  if (matchMode === 'online') return game.winner === room.snapshot?.player ? '你獲勝了！' : '朋友獲勝！';
+  return matchMode === 'solo' ? (game.winner === 0 ? '你獲勝了！' : '電腦獲勝！') : `${names[game.winner]}獲勝！`;
+}
+
+function showWinner() {
+  $('winner-title').textContent = winnerTitle();
+  $('winner-detail').textContent = `經過 ${game.ply} 手較量，${names[game.winner]}率先抵達對面底線。${matchMode === 'online' ? '邀請朋友再來一局？' : '換個策略，再挑戰一次？'}`;
+  $('play-again').textContent = matchMode === 'online' ? '邀請再來一局' : '再來一局';
+  openDialog('winner-dialog');
+}
+
+function commit(next) {
+  history.push(game);
+  game = next;
+  mode = 'move';
+  selected = null;
+  render();
+  if (game.winner !== null) {
+    showWinner();
+  } else {
+    scheduleComputerTurn();
+  }
+}
+
+function setMode(next) {
+  if (!canHumanPlay() || (next === 'wall' && game.remaining[game.turn] === 0)) return;
+  mode = next;
+  selected = null;
+  render();
+}
+
+function rotate(next) {
+  if (!canHumanPlay()) return;
+  orientation = next;
+  if (selected) selected = { ...selected, o: next };
+  render();
+}
+
+function restart(nextMatchMode = matchMode) {
+  stopComputerTurn();
+  matchMode = nextMatchMode;
+  onlineRevision = -1;
+  onlineRound = 0;
+  document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close());
+  game = createGame();
+  history = [];
+  mode = 'move';
+  orientation = 'h';
+  selected = null;
+  wallFocus = { r: 3, c: 3 };
+  render();
+}
+
+function requestNewGame(nextMatchMode = matchMode) {
+  if (matchMode === 'online' && nextMatchMode === 'online') { room.act('rematch'); return; }
+  if (matchMode === 'online' && room.session) { exitMode = nextMatchMode; openDialog('leave-dialog'); return; }
+  if (game.ply === 0) { restart(nextMatchMode); return; }
+  restartMode = nextMatchMode;
+  $('restart-title').textContent = nextMatchMode === matchMode ? '重新開始這一局？' : `切換到${nextMatchMode === 'online' ? '好友線上對弈' : nextMatchMode === 'solo' ? '單人對電腦' : '同機雙人'}？`;
+  openDialog('restart-dialog');
+}
+
+$('mode-move').addEventListener('click', () => setMode('move'));
+$('mode-wall').addEventListener('click', () => setMode('wall'));
+$('horizontal').addEventListener('click', () => rotate('h'));
+$('vertical').addEventListener('click', () => rotate('v'));
+['confirm-wall', 'place-wall-now'].forEach((id) => $(id).addEventListener('click', () => { if (selected) submitAction('wall', selected); }));
+$('rotate-wall-now').addEventListener('click', () => rotate(orientation === 'h' ? 'v' : 'h'));
+$('undo').addEventListener('click', () => {
+  if (!history.length || matchMode === 'online') return;
+  stopComputerTurn();
+  do { game = history.pop(); } while (matchMode === 'solo' && game.turn === 1 && history.length);
+  mode = 'move';
+  selected = null;
+  render();
+});
+$('restart').addEventListener('click', () => requestNewGame());
+$('match-solo').addEventListener('click', () => { if (matchMode !== 'solo') requestNewGame('solo'); });
+$('match-local').addEventListener('click', () => { if (matchMode !== 'local') requestNewGame('local'); });
+$('match-online').addEventListener('click', () => { if (matchMode !== 'online') requestNewGame('online'); });
+$('confirm-restart').addEventListener('click', () => restart(restartMode));
+$('play-again').addEventListener('click', () => {
+  if (matchMode === 'online') { $('winner-dialog').close(); room.act('rematch'); }
+  else restart();
+});
+$('create-room').addEventListener('click', () => room.connect());
+$('join-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const code = $('join-code').value.trim().toUpperCase();
+  if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) { $('room-message').textContent = '請輸入朋友提供的六碼房號。'; return; }
+  room.connect(code);
+});
+$('copy-room').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('invite-link').value); $('room-message').textContent = '邀請連結已複製，傳給朋友就能加入。'; }
+  catch { $('invite-link').focus(); $('invite-link').select(); $('room-message').textContent = '請複製上方已選取的邀請連結。'; }
+});
+$('leave-room').addEventListener('click', () => { exitMode = 'online'; openDialog('leave-dialog'); });
+$('confirm-leave').addEventListener('click', () => {
+  room.leave();
+  rememberRoom();
+  restart(exitMode);
+});
+['help', 'footer-help'].forEach((id) => $(id).addEventListener('click', () => openDialog('rules-dialog')));
+document.querySelectorAll('dialog').forEach((dialog) => dialog.addEventListener('close', scheduleComputerTurn));
+document.querySelectorAll('.close-dialog').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
+document.addEventListener('keydown', (event) => {
+  if (document.querySelector('dialog[open]') || event.ctrlKey || event.metaKey || event.altKey || mode !== 'wall') return;
+  if (event.key.toLowerCase() === 'r') { event.preventDefault(); rotate(orientation === 'h' ? 'v' : 'h'); }
+  if (event.key === 'Escape') { selected = null; updateSelection(); }
+});
+render();
+try {
+  const saved = JSON.parse(sessionStorage.getItem('quoridor-room') || 'null');
+  const invited = new URL(location.href).searchParams.get('room')?.toUpperCase();
+  if (saved?.code && saved?.token && (!invited || invited === saved.code)) {
+    restart('online');
+    room.connect(saved.code, saved);
+  } else if (invited && /^[A-HJ-NP-Z2-9]{6}$/.test(invited)) {
+    restart('online');
+    $('join-code').value = invited;
+    $('room-message').textContent = '朋友邀請你對弈，按「加入」開始。';
+  }
+} catch { /* A fresh game remains available if storage or the invite is invalid. */ }
+</script>
+</body>
+</html>
