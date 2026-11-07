@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111a20">
+  <meta name="description" content="一人一步，一牆一策。兩人輪流移動棋子、放置障礙，率先走到對岸的步步為營網頁遊戲。手機與電腦皆可玩。">
+  <title>步步為營 · 迷宮對決</title>
+  <style>/* APP_STYLES */</style>
+</head>
+<body>
+  <div class="game-app">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="步步為營首頁"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>步步為營<small>QUORIDOR / DUEL</small></span></a>
+      <div class="topbar-actions"><span class="mode-label"><span></span>同機雙人</span><button class="icon-button" id="help" aria-label="查看遊戲規則"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.7 8.7a2.5 2.5 0 0 1 4.8 1c0 1.8-2.5 2-2.5 3.8M12 16.5v.2"/></svg></button></div>
+    </header>
+    <main>
+      <div class="intro"><div><p class="eyebrow">THE SHORTEST WAY ISN’T ALWAYS STRAIGHT.</p><h1>一步前進，一牆逆轉。</h1></div><p class="intro-note">為自己找路，也讓對手繞點路。<br>先走到對面底線，就贏了。</p></div>
+      <div class="arena">
+        <section class="table" aria-label="遊戲棋盤">
+          <div class="player-rail pink" id="player-1"><div class="player-name"><span class="mini-pawn" aria-hidden="true"></span><div><strong>粉紅方</strong><small>往下方底線 ↓</small></div></div><div class="wall-inventory"><div class="wall-sticks" aria-hidden="true"></div><span class="wall-count"></span></div></div>
+          <div class="board-shell">
+            <div class="goal goal-blue" aria-hidden="true"><span>藍方終點</span></div>
+            <div class="coordinate-row" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span><span>I</span></div>
+            <div class="board" id="board" aria-label="9 乘 9 棋盤">
+              <div class="tiles" id="tiles"></div><div class="walls" id="walls" aria-hidden="true"></div><div class="wall-targets" id="wall-targets" hidden></div><div class="wall ghost" id="ghost" hidden aria-hidden="true"></div>
+            </div>
+            <div class="goal goal-pink" aria-hidden="true"><span>粉紅方終點</span></div>
+          </div>
+          <div class="player-rail blue" id="player-0"><div class="player-name"><span class="mini-pawn" aria-hidden="true"></span><div><strong>藍方</strong><small>往上方底線 ↑</small></div></div><div class="wall-inventory"><div class="wall-sticks" aria-hidden="true"></div><span class="wall-count"></span></div></div>
+        </section>
+        <aside class="dashboard" aria-label="遊戲操作">
+          <div class="turn-heading"><span class="eyebrow">YOUR TURN</span><span class="move-number" id="move-number">第 001 手</span></div>
+          <div class="turn-title"><span class="turn-orb" aria-hidden="true"></span><h2 id="turn-title">藍方的回合</h2></div>
+          <p class="turn-caption" id="turn-caption">往前一步，或讓對手多繞一步。</p>
+          <div class="action-picker" aria-label="選擇行動"><button class="action active" id="mode-move" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-6 6 6-6 6 6"/></svg><span>移動棋子<small>走出下一步</small></span><span class="action-dot"></span></button><button class="action" id="mode-wall" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1"/><path d="M4 12h16M12 6v6m-5 0v6m10-6v6"/></svg><span>放置牆壁<small>改變對手的路</small></span><span class="action-dot"></span></button></div>
+          <div class="wall-controls" id="wall-controls" hidden><div class="orientation-label"><span>牆壁方向</span><span class="keyboard-hint">R 旋轉</span></div><div class="orientation-picker"><button id="horizontal" aria-pressed="true"><span class="direction-icon horizontal"></span>橫向</button><button id="vertical" aria-pressed="false"><span class="direction-icon vertical"></span>直向</button></div><button id="confirm-wall" class="primary-button" disabled>先選擇放牆位置</button></div>
+          <div class="instruction" id="instruction" role="status" aria-live="polite"><span class="instruction-icon" aria-hidden="true">↗</span><p id="instruction-text">點選棋盤上的亮點，移動你的棋子。</p></div>
+          <div class="match-tools"><button id="undo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5-5 5 5 5M4 10h9a6 6 0 0 1 6 6v2"/></svg>悔一步</button><button id="restart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M5 8a8 8 0 0 1 13-2l2 3M4 15l2 3a8 8 0 0 0 13-2"/></svg>重新開始</button></div>
+          <div class="quick-rule"><span class="rule-number">01 / 目標</span><p>先到彼岸的人，贏下這場對決。</p><div class="rule-line"><span class="rule-start"></span><span class="rule-dash"></span><span class="rule-finish">↗</span></div><small>每回合只能走一步或放一面牆。</small></div>
+        </aside>
+      </div>
+      <footer><span>兩位玩家 · 81 格棋盤 · 無數種走法</span><button id="footer-help">第一次玩？看看規則 <span aria-hidden="true">↗</span></button></footer>
+    </main>
+  </div>
+  <dialog id="rules-dialog" aria-labelledby="rules-title"><div class="dialog-head"><p class="eyebrow">HOW TO PLAY</p><button class="icon-button close-dialog" aria-label="關閉規則">×</button></div><h2 id="rules-title">好上手，有點傷腦筋。</h2><p class="dialog-intro">兩人共用一個畫面，藍方先手，輪流行動。</p><ol class="rule-list"><li><strong>先走到對面，就贏了</strong><p>從中央起點出發，抵達對面底線的任意一格即可獲勝。</p></li><li><strong>移動，或放牆，二選一</strong><p>棋子每次上下左右走一格，不能穿牆。每人有 10 道牆，每道橫跨兩格；選擇方向與位置後，按「確認放置」。牆放下後，雙方都不能穿越，也不能移動它。</p></li><li><strong>相遇時，可以跳過對方</strong><p>與對方相鄰且中間無牆時，可以直線跳過。若對方後方有牆或棋盤邊界，才能改走其兩側可通行的斜格。</p></li><li><strong>可以繞路，不能封死</strong><p>牆不能重疊或交叉，而且雙方都必須留有至少一條通往終點的路。遊戲會自動檢查。</p></li></ol><p class="keyboard-note">鍵盤：Tab 選取、Enter 操作；放牆時可用方向鍵選位置、R 旋轉、Esc 取消預覽。</p><button class="primary-button close-dialog">知道了，來一局</button></dialog>
+  <dialog id="restart-dialog" aria-labelledby="restart-title"><p class="eyebrow">A FRESH START</p><h2 id="restart-title">重新開始這一局？</h2><p class="dialog-intro">棋子與牆壁將回到初始狀態，由藍方先手。</p><div class="dialog-actions"><button class="secondary-button close-dialog">繼續這局</button><button class="primary-button" id="confirm-restart">重新開始</button></div></dialog>
+  <dialog id="winner-dialog" aria-labelledby="winner-title"><div class="dialog-head"><p class="eyebrow">THE OTHER SIDE, AT LAST.</p><button class="icon-button close-dialog" aria-label="檢視棋盤">×</button></div><div class="victory-art" aria-hidden="true"><span class="victory-orb"></span><i></i><i></i><i></i></div><h2 id="winner-title">藍方獲勝！</h2><p class="dialog-intro" id="winner-detail"></p><button class="primary-button" id="play-again">再來一局</button><button class="text-button close-dialog">留下來看看棋盤</button></dialog>
+  <script type="module">// APP_SCRIPT</script>
+</body>
+</html>
