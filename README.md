@@ -4,7 +4,9 @@
 
 ## 使用
 
-直接以瀏覽器開啟 `dist/index.html` 即可遊玩，無須伺服器、安裝套件或網路連線。這是兩人共用一台裝置的版本。
+從 [Releases](https://github.com/gyuyu2002-Jeff/quoridor-web/releases/latest) 下載 `index.html`，直接以瀏覽器開啟即可遊玩，無須伺服器、安裝套件或網路連線。這是兩人共用一台裝置的版本。
+
+若下載的是原始碼，請先依下方步驟執行 `npm run build`，再開啟產生的 `dist/index.html`。
 
 - 藍方先手，每回合移動棋子或放一道牆。
 - 點亮點移動；放牆時選橫／直方向，再點縫隙預覽，最後確認。
